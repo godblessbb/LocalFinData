@@ -10,11 +10,12 @@
 ## 快速开始
 1. 安装依赖：`pip install -r requirements.txt`。
 2. 下载日级/事件数据并写入本地：
-   ```bash
-   python scripts/download_ticker_info.py AAPL TSLA QQQ
-   ```
-   默认抓取最近 5 年日线及所有日度更新的事件数据，按股票保存在 `data/ticker/<TICKER>.csv`。
-   若需要带指标的行情数据，可在代码中调用 `localfindata.pipeline.download_and_cache()` 指定起止日期和周期。
+ ```bash
+  python scripts/download_ticker_info.py AAPL TSLA QQQ
+  ```
+  默认抓取最近 5 年日线及所有日度更新的事件数据，按股票保存在 `data/ticker/<TICKER>.csv`。
+  遇到 Yahoo Finance 的限流（Too Many Requests）时脚本会自动线性重试 3 次，仍失败时请稍等再试或降低并发标的数量。
+  若需要带指标的行情数据，可在代码中调用 `localfindata.pipeline.download_and_cache()` 指定起止日期和周期。
 3. 生成 K 线图（默认读取 `data/prices/`，输出到 `data/candles/`）：
    ```bash
    python scripts/generate_candlestick_charts.py AAPL --auto-split --max-years 2

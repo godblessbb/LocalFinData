@@ -7,8 +7,30 @@ from typing import Iterable, List
 
 import pandas as pd
 import yfinance as yf
+from yfinance.exceptions import YFRateLimitError
 
 from .config import DATA_DIR
+
+
+def _retry_yf_call(func, *args, max_attempts: int = 3, backoff: int = 5, **kwargs):
+    """Retry a yfinance call on rate limit errors with linear backoff."""
+
+    attempt = 1
+    while True:
+        try:
+            return func(*args, **kwargs)
+        except YFRateLimitError as exc:  # pragma: no cover - network dependent
+            if attempt >= max_attempts:
+                raise exc
+            wait_seconds = backoff * attempt
+            print(
+                f"[yfinance] Rate limited calling {func.__name__}; "
+                f"retrying in {wait_seconds}s (attempt {attempt + 1}/{max_attempts})"
+            )
+            import time
+
+            time.sleep(wait_seconds)
+            attempt += 1
 
 
 def _default_dates(years: int = 5) -> tuple[str, str]:
@@ -50,7 +72,14 @@ def _frame_from_df(data: pd.DataFrame | None, dataset: str, tic: str) -> pd.Data
 
 
 def fetch_history(tic: str, ticker: yf.Ticker, start: str, end: str) -> pd.DataFrame | None:
-    history = ticker.history(start=start, end=end, interval="1d", actions=True, auto_adjust=False)
+    history = _retry_yf_call(
+        ticker.history,
+        start=start,
+        end=end,
+        interval="1d",
+        actions=True,
+        auto_adjust=False,
+    )
     if history.empty:
         return None
 
@@ -156,7 +185,7 @@ def fetch_earnings_and_forecasts(tic: str, ticker: yf.Ticker) -> List[pd.DataFra
 
 def fetch_shares(tic: str, ticker: yf.Ticker, start: str, end: str) -> pd.DataFrame | None:
     try:
-        shares = ticker.get_shares_full(start=start, end=end)
+        shares = _retry_yf_call(ticker.get_shares_full, start=start, end=end)
     except Exception:
         shares = getattr(ticker, "shares", None)
     if shares is None:
