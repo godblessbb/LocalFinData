@@ -14,9 +14,9 @@
    python scripts/download_prices.py AAPL MSFT --start 2022-01-01 --end 2024-01-01
    ```
    下载完成后会在 `data/prices/` 下生成含指标的 CSV 文件。
-3. 生成 K 线图（在 `data` 目录运行）：
+3. 生成 K 线图（默认读取 `data/prices/`，输出到 `data/candles/`）：
    ```bash
-   python generate_candlestick_charts.py AAPL --auto-split --max-years 2
+   python scripts/generate_candlestick_charts.py AAPL --auto-split --max-years 2
    ```
 
 ## 代码结构
@@ -25,7 +25,11 @@
   - `pipeline.py`：下载行情、补充指标、保存到本地的高阶流程。
   - `indicators.py`：使用 `ta` 库计算训练和可视化所需的技术指标。
 - `scripts/download_prices.py`：命令行脚本，用于触发下载和本地缓存。
-- `data/generate_candlestick_charts.py`：读取本地 CSV，自动切分时间段并绘制多面板 K 线图。
+- `scripts/generate_candlestick_charts.py`：读取本地 CSV，自动切分时间段并绘制多面板 K 线图。
+
+## 数据目录约定
+- `data/` 用于存放下载得到的 CSV、图片等大体量数据，已通过 `.gitignore` 屏蔽（仅保留下载进度文件 `data/download_progress.json`）。
+- 行情缓存默认写入 `data/prices/`，生成的图表默认写入 `data/candles/`，可通过脚本参数覆盖。
 
 ## 定期抓取建议
 可将 `scripts/download_prices.py` 放入定时任务（如 cron、Airflow 或 CI）中，按交易日批量拉取所需标的的最新行情并覆盖/追加到 `data/prices/`。生成的数据可直接供训练管线读取，同时可用 `generate_candlestick_charts.py` 快速检查行情与指标质量。

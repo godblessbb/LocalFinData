@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 生成股票 K 线图
-读取 prices 目录下的股票数据，生成专业的 K 线图并保存到 data/candles/<TICKER>/ 目录
+读取 data/prices 下的股票数据，生成专业的 K 线图并保存到 data/candles/<TICKER>/ 目录
 文件名格式：<开始日期>_to_<结束日期>.png
 """
 
@@ -15,6 +15,11 @@ import sys
 import argparse
 from pathlib import Path
 
+# 项目根目录（用于定位 data 目录）
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_DATA_DIR = PROJECT_ROOT / "data" / "prices"
+DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "data" / "candles"
+
 # 配置中文字体支持
 plt.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'SimHei', 'DejaVu Sans']
 plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
@@ -23,7 +28,7 @@ plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
 class CandlestickChartGenerator:
     """K 线图生成器"""
 
-    def __init__(self, data_file, ticker, output_dir='candles', ma_periods=None):
+    def __init__(self, data_file, ticker, output_dir=DEFAULT_OUTPUT_DIR, ma_periods=None):
         """
         初始化 K 线图生成器
 
@@ -33,7 +38,7 @@ class CandlestickChartGenerator:
             output_dir: 输出目录（相对于 data 目录）
             ma_periods: 均线周期列表，例如 [5, 20, 50, 100, 200]
         """
-        self.data_file = data_file
+        self.data_file = Path(data_file)
         self.ticker = ticker.upper()
 
         # 设置均线周期（默认使用 5, 20, 50, 100, 200 日 EMA）
@@ -42,9 +47,12 @@ class CandlestickChartGenerator:
         else:
             self.ma_periods = sorted(ma_periods)  # 排序以便显示
 
-        # 设置输出目录（脚本在 data 目录下）
-        script_dir = Path(__file__).parent
-        self.output_dir = script_dir / output_dir / self.ticker
+        # 设置输出目录（允许传入绝对/相对路径）
+        output_dir_path = Path(output_dir)
+        if not output_dir_path.is_absolute():
+            output_dir_path = (Path(__file__).parent / output_dir_path).resolve()
+
+        self.output_dir = output_dir_path / self.ticker
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         # 读取数据
@@ -631,9 +639,18 @@ def main():
                        help='每个时间段的最大年限（默认: 2）')
     parser.add_argument('--ma-periods', type=str, default='5,20,50,100,200',
                        help='均线周期，用逗号分隔（默认: 5,20,50,100,200）')
-    parser.add_argument('--output-dir', '-o', default='candles', help='输出目录（默认: candles）')
+    parser.add_argument(
+        '--output-dir',
+        '-o',
+        default=str(DEFAULT_OUTPUT_DIR),
+        help='输出目录，默认写入项目 data/candles'
+    )
     parser.add_argument('--dpi', type=int, default=150, help='图像分辨率（默认: 150）')
-    parser.add_argument('--data-dir', default='../prices', help='数据目录（默认: ../prices）')
+    parser.add_argument(
+        '--data-dir',
+        default=str(DEFAULT_DATA_DIR),
+        help='数据目录，默认读取项目 data/prices'
+    )
 
     args = parser.parse_args()
 
@@ -657,8 +674,7 @@ def main():
     print(f"  - 图像分辨率: {args.dpi} DPI")
 
     # 获取数据目录（相对于脚本位置）
-    script_dir = Path(__file__).parent
-    data_dir = script_dir / args.data_dir
+    data_dir = Path(args.data_dir).expanduser().resolve()
 
     if not data_dir.exists():
         print(f"错误：数据目录不存在: {data_dir}")

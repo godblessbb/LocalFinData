@@ -1,6 +1,6 @@
 # Python K 线图生成器使用说明
 
-这个脚本可以读取 `prices/` 目录下的股票数据，自动生成专业的 K 线图，并保存到 `candles/<TICKER>/` 目录下。
+`scripts/generate_candlestick_charts.py` 会读取 `data/prices/` 下的股票数据，自动生成专业的 K 线图，并保存到 `data/candles/<TICKER>/` 目录下（目录会自动创建）。
 
 ## ✨ 新功能
 
@@ -104,30 +104,28 @@
 ### 基本用法（推荐）
 
 ```bash
-cd data
-
 # 自动切分并生成所有时间段的 K 线图（推荐！）
-python generate_candlestick_charts.py AAPL --auto-split --data-dir prices
+python scripts/generate_candlestick_charts.py AAPL --auto-split --data-dir data/prices --output-dir data/candles
 
 # 自定义均线周期（最多10条）
-python generate_candlestick_charts.py AAPL --auto-split --data-dir prices \
-  --ma-periods 5,10,20,30,50,100,150,200
+python scripts/generate_candlestick_charts.py AAPL --auto-split --data-dir data/prices \
+  --output-dir data/candles --ma-periods 5,10,20,30,50,100,150,200
 ```
 
 ### 高级用法
 
 ```bash
 # 指定每段的年限（1年一段）
-python generate_candlestick_charts.py AAPL --auto-split --max-years 1 --data-dir prices
+python scripts/generate_candlestick_charts.py AAPL --auto-split --max-years 1 --data-dir data/prices --output-dir data/candles
 
 # 批量生成多个股票（自动切分）
-python generate_candlestick_charts.py AAPL TSLA GOOGL MSFT --auto-split --data-dir prices
+python scripts/generate_candlestick_charts.py AAPL TSLA GOOGL MSFT --auto-split --data-dir data/prices --output-dir data/candles
 
 # 高分辨率输出（300 DPI）
-python generate_candlestick_charts.py AAPL --auto-split --dpi 300 --data-dir prices
+python scripts/generate_candlestick_charts.py AAPL --auto-split --dpi 300 --data-dir data/prices --output-dir data/candles
 
 # 手动指定日期范围（不自动切分）
-python generate_candlestick_charts.py AAPL --data-dir prices \
+python scripts/generate_candlestick_charts.py AAPL --data-dir data/prices --output-dir data/candles \
   --start 2024-01-01 --end 2024-12-31
 ```
 

@@ -1,0 +1,7 @@
+# 数据与缓存
+/data/**
+!data/download_progress.json
+
+# Python 常规
+__pycache__/
+*.py[cod]
