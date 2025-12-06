@@ -33,5 +33,14 @@
 - `data/` 用于存放下载得到的 CSV、图片等大体量数据，已通过 `.gitignore` 屏蔽（仅保留下载进度文件 `data/download_progress.json`）。
 - 行情缓存默认写入 `data/prices/`，生成的图表默认写入 `data/candles/`，可通过脚本参数覆盖。
 
+## 一键验证示例
+要快速确认抓取脚本是否工作，可在项目根目录直接运行下面一条命令，测试标的为 AAPL、TSLA、QQQ：
+
+```bash
+python scripts/download_ticker_info.py AAPL TSLA QQQ
+```
+
+完成后在 `data/ticker/` 可看到 `AAPL.csv`、`TSLA.csv`、`QQQ.csv` 三个文件；如果此前已有同名文件，脚本会与历史数据取并集做增量更新，而不会覆盖原有包含指标的列。
+
 ## 定期抓取建议
 可将 `scripts/download_ticker_info.py` 放入定时任务（如 cron、Airflow 或 CI）中，按交易日批量拉取所需标的的最新行情与事件数据并追加到 `data/ticker/`。生成的数据可直接供训练管线读取，同时可用 `generate_candlestick_charts.py` 快速检查行情与指标质量。
