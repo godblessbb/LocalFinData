@@ -14,7 +14,13 @@
   python scripts/download_ticker_info.py AAPL TSLA QQQ
   ```
   默认抓取最近 5 年日线及所有日度更新的事件数据，按股票保存在 `data/ticker/<TICKER>.csv`。
-  遇到 Yahoo Finance 的限流（Too Many Requests）时脚本会自动线性重试 3 次，仍失败时请稍等再试或降低并发标的数量。
+
+  **Rate Limit 优化**：脚本已内置智能重试机制，遇到 Yahoo Finance 限流时会自动重试最多 5 次（指数退避：10s、20s、40s、80s、160s）。同时在处理每个股票之间自动等待 3 秒，每个 API 调用之间等待 0.5 秒，大大降低触发限流的概率。若仍然失败，建议：
+  - 减少每次处理的股票数量
+  - 等待一段时间后重试（建议 5-10 分钟）
+  - 检查网络环境是否使用共享 IP（如公司网络、公共 WiFi）
+  - 考虑使用 VPN 更换 IP 地址
+
   若需要带指标的行情数据，可在代码中调用 `localfindata.pipeline.download_and_cache()` 指定起止日期和周期。
 3. 生成 K 线图（默认读取 `data/prices/`，输出到 `data/candles/`）：
    ```bash

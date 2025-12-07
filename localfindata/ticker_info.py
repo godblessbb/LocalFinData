@@ -12,8 +12,8 @@ from yfinance.exceptions import YFRateLimitError
 from .config import DATA_DIR
 
 
-def _retry_yf_call(func, *args, max_attempts: int = 3, backoff: int = 5, **kwargs):
-    """Retry a yfinance call on rate limit errors with linear backoff."""
+def _retry_yf_call(func, *args, max_attempts: int = 5, backoff: int = 10, **kwargs):
+    """Retry a yfinance call on rate limit errors with exponential backoff."""
 
     attempt = 1
     while True:
@@ -22,7 +22,8 @@ def _retry_yf_call(func, *args, max_attempts: int = 3, backoff: int = 5, **kwarg
         except YFRateLimitError as exc:  # pragma: no cover - network dependent
             if attempt >= max_attempts:
                 raise exc
-            wait_seconds = backoff * attempt
+            # Exponential backoff: 10s, 20s, 40s, 80s, 160s
+            wait_seconds = backoff * (2 ** (attempt - 1))
             print(
                 f"[yfinance] Rate limited calling {func.__name__}; "
                 f"retrying in {wait_seconds}s (attempt {attempt + 1}/{max_attempts})"
@@ -198,8 +199,16 @@ def fetch_shares(tic: str, ticker: yf.Ticker, start: str, end: str) -> pd.DataFr
     return _frame_from_series(pd.Series(shares), "shares", "shares_outstanding", tic)
 
 
-def fetch_daily_datasets(tic: str, start: str | None = None, end: str | None = None) -> pd.DataFrame:
-    """Collect daily/ event-driven datasets from yfinance for a single ticker."""
+def fetch_daily_datasets(tic: str, start: str | None = None, end: str | None = None, api_delay: float = 0.5) -> pd.DataFrame:
+    """Collect daily/ event-driven datasets from yfinance for a single ticker.
+
+    Args:
+        tic: Stock ticker symbol
+        start: Start date (YYYY-MM-DD)
+        end: End date (YYYY-MM-DD)
+        api_delay: Seconds to wait between API calls (default: 0.5)
+    """
+    import time
 
     if start is None and end is None:
         start_date, end_date = _default_dates()
@@ -218,29 +227,38 @@ def fetch_daily_datasets(tic: str, start: str | None = None, end: str | None = N
     history = fetch_history(tic, ticker, start_date, end_date)
     if history is not None:
         frames.append(history)
+    time.sleep(api_delay)
 
     dividends = _frame_from_series(getattr(ticker, "dividends", None), "dividends", "dividend", tic)
     if dividends is not None:
         frames.append(dividends)
+    time.sleep(api_delay)
 
     splits = _frame_from_series(getattr(ticker, "splits", None), "splits", "split_ratio", tic)
     if splits is not None:
         frames.append(splits)
+    time.sleep(api_delay)
 
     capital_gains = _frame_from_series(getattr(ticker, "capital_gains", None), "capital_gains", "capital_gains", tic)
     if capital_gains is not None:
         frames.append(capital_gains)
+    time.sleep(api_delay)
 
     calendar = fetch_calendar(tic, ticker)
     if calendar is not None:
         frames.append(calendar)
+    time.sleep(api_delay)
 
     earnings_dates = fetch_earnings_dates(tic, ticker)
     if earnings_dates is not None:
         frames.append(earnings_dates)
+    time.sleep(api_delay)
 
     frames.extend(fetch_recommendations(tic, ticker))
+    time.sleep(api_delay)
+
     frames.extend(fetch_earnings_and_forecasts(tic, ticker))
+    time.sleep(api_delay)
 
     shares = fetch_shares(tic, ticker, start_date, end_date)
     if shares is not None:
@@ -277,11 +295,39 @@ def save_ticker_info(tic: str, data: pd.DataFrame) -> Path:
     return path
 
 
-def download_ticker_batch(tickers: Iterable[str], start: str | None = None, end: str | None = None) -> list[Path]:
+def download_ticker_batch(
+    tickers: Iterable[str],
+    start: str | None = None,
+    end: str | None = None,
+    delay_between_tickers: int = 3,
+    api_delay: float = 0.5,
+) -> list[Path]:
+    """Download data for multiple tickers with delay between each to avoid rate limits.
+
+    Args:
+        tickers: Stock ticker symbols to download
+        start: Start date (YYYY-MM-DD)
+        end: End date (YYYY-MM-DD)
+        delay_between_tickers: Seconds to wait between processing each ticker (default: 3)
+        api_delay: Seconds to wait between API calls within each ticker (default: 0.5)
+    """
+    import time
+
     paths: list[Path] = []
-    for ticker in tickers:
-        data = fetch_daily_datasets(ticker, start=start, end=end)
+    ticker_list = list(tickers)
+
+    for i, ticker in enumerate(ticker_list):
+        print(f"Processing {ticker} ({i+1}/{len(ticker_list)})...")
+        data = fetch_daily_datasets(ticker, start=start, end=end, api_delay=api_delay)
         if data.empty:
+            print(f"No data found for {ticker}")
             continue
         paths.append(save_ticker_info(ticker, data))
+        print(f"Saved data for {ticker}")
+
+        # Add delay between tickers (except after the last one)
+        if i < len(ticker_list) - 1:
+            print(f"Waiting {delay_between_tickers}s before next ticker...")
+            time.sleep(delay_between_tickers)
+
     return paths
