@@ -3,3 +3,16 @@ numpy>=1.21
 yfinance>=0.2
 matplotlib>=3.7
 ta>=0.11
+
+# Vector database dependencies
+chromadb>=0.4.0
+transformers>=4.36.0
+torch>=2.0.0
+tqdm>=4.65.0
+
+# Optional: for 4-bit quantization (recommended for large models)
+# bitsandbytes>=0.41.0  # Uncomment if using 4-bit quantization
+# accelerate>=0.24.0    # Uncomment if using 4-bit quantization
+
+# Optional: fallback embedding model
+# sentence-transformers>=2.2.0  # Uncomment for fallback model support
