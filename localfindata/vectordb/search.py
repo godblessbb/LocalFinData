@@ -12,6 +12,7 @@ from dataclasses import dataclass, asdict
 from typing import Any, Dict, List, Optional
 
 from .store import FinancialNewsStore
+from .embedder import BaseEmbedder, OpenAIEmbedder
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +104,8 @@ class SearchAPI:
         persist_dir: str = "./data/vector_db",
         model_path: Optional[str] = None,
         use_4bit: bool = True,
+        use_openai: bool = True,
+        embedder: Optional[BaseEmbedder] = None,
     ):
         """
         Initialize the Search API.
@@ -111,10 +114,17 @@ class SearchAPI:
             persist_dir: Path to ChromaDB persist directory
             model_path: Path to embedding model (optional)
             use_4bit: Whether to use 4-bit quantization
+            use_openai: Use OpenAI API for embeddings (default: True)
+            embedder: Custom embedder instance (overrides other options)
         """
+        # Determine which embedder to use
+        if embedder is None and use_openai:
+            embedder = OpenAIEmbedder()
+
         self._store = FinancialNewsStore(
             persist_dir=persist_dir,
-            model_path=model_path,
+            embedder=embedder,
+            model_path=model_path if not use_openai else None,
             use_4bit=use_4bit,
         )
 
