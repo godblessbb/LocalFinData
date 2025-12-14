@@ -262,6 +262,19 @@ class OpenAIEmbedder(BaseEmbedder):
         """Lazy load OpenAI client."""
         if self._client is None:
             import os
+            from pathlib import Path
+
+            # Try to load from .env file
+            try:
+                from dotenv import load_dotenv
+                # Look for .env in project root
+                env_path = Path(__file__).resolve().parent.parent.parent / ".env"
+                if env_path.exists():
+                    load_dotenv(env_path)
+                    logger.info(f"Loaded environment from {env_path}")
+            except ImportError:
+                pass  # dotenv not installed, use system env vars
+
             try:
                 from openai import OpenAI
             except ImportError:
@@ -272,11 +285,13 @@ class OpenAIEmbedder(BaseEmbedder):
             api_key = self._api_key or os.environ.get("OPENAI_API_KEY")
             if not api_key:
                 raise ValueError(
-                    "OpenAI API key not provided. Set OPENAI_API_KEY environment "
-                    "variable or pass api_key parameter."
+                    "OpenAI API key not provided. Set OPENAI_API_KEY in .env file "
+                    "or pass api_key parameter."
                 )
 
-            self._client = OpenAI(api_key=api_key)
+            # Support custom base URL (for proxies)
+            base_url = os.environ.get("OPENAI_BASE_URL")
+            self._client = OpenAI(api_key=api_key, base_url=base_url)
             logger.info(f"OpenAI client initialized. Model: {self.model}")
 
         return self._client

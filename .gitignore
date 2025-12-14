@@ -2,6 +2,10 @@
 /data/**
 !data/download_progress.json
 
+# 环境变量（包含敏感信息）
+.env
+.env.local
+
 # Python 常规
 __pycache__/
 *.py[cod]
