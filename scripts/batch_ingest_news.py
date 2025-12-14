@@ -84,9 +84,51 @@ def generate_doc_id(symbol: str, date: str, title: str, content: str) -> str:
     ).hexdigest()
 
 
-def prepare_batch_requests(news_dir: str, output_file: Path) -> Dict:
+def get_existing_ids_from_db(persist_dir: str = "./data/vector_db") -> set:
+    """Get all existing document IDs from ChromaDB."""
+    import chromadb
+
+    persist_path = Path(persist_dir)
+    if not persist_path.exists():
+        return set()
+
+    try:
+        chroma_client = chromadb.PersistentClient(path=str(persist_path))
+        collection = chroma_client.get_or_create_collection(name="financial_news")
+        count = collection.count()
+
+        if count == 0:
+            return set()
+
+        logger.info(f"Found {count} existing documents in ChromaDB")
+
+        # Get all IDs in batches
+        existing_ids = set()
+        batch_size = 10000
+        for offset in range(0, count, batch_size):
+            result = collection.get(limit=batch_size, offset=offset, include=[])
+            existing_ids.update(result["ids"])
+
+        return existing_ids
+    except Exception as e:
+        logger.warning(f"Could not read existing IDs from ChromaDB: {e}")
+        return set()
+
+
+def prepare_batch_requests(
+    news_dir: str,
+    output_file: Path,
+    persist_dir: str = "./data/vector_db",
+    skip_existing: bool = True
+) -> Dict:
     """
     Read all CSVs and prepare batch request JSONL file.
+
+    Args:
+        news_dir: Directory containing news CSVs
+        output_file: Path to output JSONL file
+        persist_dir: ChromaDB persist directory (for checking existing docs)
+        skip_existing: If True, skip documents already in ChromaDB
 
     Returns metadata about the prepared batch.
     """
@@ -100,6 +142,13 @@ def prepare_batch_requests(news_dir: str, output_file: Path) -> Dict:
 
     logger.info(f"Found {len(csv_files)} CSV files")
 
+    # Get existing IDs from ChromaDB
+    existing_ids = set()
+    if skip_existing:
+        existing_ids = get_existing_ids_from_db(persist_dir)
+        if existing_ids:
+            logger.info(f"Will skip {len(existing_ids)} existing documents")
+
     # Ensure output directory exists
     output_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -107,6 +156,7 @@ def prepare_batch_requests(news_dir: str, output_file: Path) -> Dict:
     doc_metadata = {}  # doc_id -> {symbol, date, title, source, price_changes...}
     total_docs = 0
     skipped_empty = 0
+    skipped_existing = 0
 
     with open(output_file, "w", encoding="utf-8") as f:
         for csv_file in csv_files:
@@ -132,8 +182,13 @@ def prepare_batch_requests(news_dir: str, output_file: Path) -> Dict:
                 # Generate document ID
                 doc_id = generate_doc_id(symbol, date, title, content)
 
-                # Skip if already processed (duplicate)
+                # Skip if already processed (duplicate in this batch)
                 if doc_id in doc_metadata:
+                    continue
+
+                # Skip if already exists in ChromaDB
+                if doc_id in existing_ids:
+                    skipped_existing += 1
                     continue
 
                 # Prepare text for embedding
@@ -178,14 +233,16 @@ def prepare_batch_requests(news_dir: str, output_file: Path) -> Dict:
                 if total_docs % 10000 == 0:
                     logger.info(f"Processed {total_docs} documents...")
 
-    logger.info(f"Total documents: {total_docs}")
-    logger.info(f"Skipped empty: {skipped_empty}")
+    logger.info(f"New documents to embed: {total_docs}")
+    logger.info(f"Skipped (empty): {skipped_empty}")
+    logger.info(f"Skipped (existing in DB): {skipped_existing}")
     logger.info(f"Batch request file: {output_file}")
 
     # Save metadata
     metadata = {
         "total_documents": total_docs,
         "skipped_empty": skipped_empty,
+        "skipped_existing": skipped_existing,
         "request_file": str(output_file),
         "documents": doc_metadata,
     }
@@ -513,6 +570,16 @@ Example workflow:
     # Prepare command
     prepare_parser = subparsers.add_parser("prepare", help="Prepare batch request file")
     prepare_parser.add_argument("news_dir", help="Directory containing news CSVs")
+    prepare_parser.add_argument(
+        "--persist-dir",
+        default="./data/vector_db",
+        help="ChromaDB persist directory (for checking existing docs)"
+    )
+    prepare_parser.add_argument(
+        "--full",
+        action="store_true",
+        help="Process all documents, ignoring existing ones in ChromaDB"
+    )
 
     # Submit command
     subparsers.add_parser("submit", help="Submit batch job")
@@ -534,7 +601,12 @@ Example workflow:
     args = parser.parse_args()
 
     if args.command == "prepare":
-        metadata = prepare_batch_requests(args.news_dir, BATCH_REQUEST_FILE)
+        metadata = prepare_batch_requests(
+            args.news_dir,
+            BATCH_REQUEST_FILE,
+            persist_dir=args.persist_dir,
+            skip_existing=not args.full
+        )
 
         # Save metadata
         BATCH_METADATA_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -545,16 +617,22 @@ Example workflow:
 
         # Estimate cost
         total_docs = metadata["total_documents"]
+        skipped_existing = metadata.get("skipped_existing", 0)
         # Rough estimate: 500 tokens per doc
         estimated_tokens = total_docs * 500
         estimated_cost = (estimated_tokens / 1_000_000) * 0.01  # Batch API price
 
         print(f"\n=== Batch Preparation Complete ===")
-        print(f"Total documents: {total_docs:,}")
+        print(f"New documents to embed: {total_docs:,}")
+        if skipped_existing > 0:
+            print(f"Skipped (already in DB): {skipped_existing:,}")
         print(f"Request file: {BATCH_REQUEST_FILE}")
         print(f"Estimated tokens: ~{estimated_tokens:,}")
         print(f"Estimated cost: ~${estimated_cost:.2f} (Batch API)")
-        print(f"\nNext step: python scripts/batch_ingest_news.py submit")
+        if total_docs == 0:
+            print(f"\nNo new documents to process!")
+        else:
+            print(f"\nNext step: python scripts/batch_ingest_news.py submit")
 
     elif args.command == "submit":
         batch_id = submit_batch(BATCH_REQUEST_FILE, BATCH_METADATA_FILE)
