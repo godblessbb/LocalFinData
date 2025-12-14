@@ -26,7 +26,7 @@ Quick Start:
 
 from .store import FinancialNewsStore, NewsDocument
 from .search import SearchResult, SearchAPI, quick_search
-from .embedder import QwenEmbedder, SentenceTransformerEmbedder, create_embedder
+from .embedder import QwenEmbedder, SentenceTransformerEmbedder, OpenAIEmbedder, create_embedder
 from .ingest import NewsIngester, ingest_from_csv, ingest_from_directory
 
 __all__ = [
@@ -40,6 +40,7 @@ __all__ = [
     # Embedders
     "QwenEmbedder",
     "SentenceTransformerEmbedder",
+    "OpenAIEmbedder",
     "create_embedder",
     # Convenience functions
     "quick_search",

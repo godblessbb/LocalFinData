@@ -3,18 +3,18 @@
 CLI script for ingesting financial news into the vector database.
 
 Usage:
-    # Ingest a single CSV file
-    python scripts/ingest_news_vectors.py ./data/news/AAPL.csv
+    # Ingest with OpenAI (recommended - fast and cheap)
+    python scripts/ingest_news_vectors.py ./data/news/AAPL.csv --openai
 
-    # Ingest entire directory
-    python scripts/ingest_news_vectors.py ./data/news-yh-stock/ --directory
+    # Ingest entire directory with OpenAI
+    python scripts/ingest_news_vectors.py ./data/news-yh-stock/ -d --openai
 
-    # With custom model path
-    python scripts/ingest_news_vectors.py ./data/news/ --directory \
+    # Ingest with local model
+    python scripts/ingest_news_vectors.py ./data/news/ -d \
         --model-path D:/models/Qwen3-Embedding-4B
 
-    # Without 4-bit quantization
-    python scripts/ingest_news_vectors.py ./data/news/ --directory --no-4bit
+    # Check stats only
+    python scripts/ingest_news_vectors.py --stats
 """
 
 from __future__ import annotations
@@ -29,6 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from localfindata.vectordb.store import FinancialNewsStore
 from localfindata.vectordb.ingest import NewsIngester
+from localfindata.vectordb.embedder import OpenAIEmbedder, QwenEmbedder
 
 
 def setup_logging(verbose: bool = False):
@@ -47,18 +48,21 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-    # Ingest single file
-    python scripts/ingest_news_vectors.py ./data/news/AAPL.csv
+    # Ingest with OpenAI API (fast, ~$0.02/1M tokens)
+    python scripts/ingest_news_vectors.py ./data/news/AAPL.csv --openai
 
-    # Ingest directory
-    python scripts/ingest_news_vectors.py ./data/news-yh-stock/ -d
+    # Ingest directory with OpenAI
+    python scripts/ingest_news_vectors.py ./data/news-yh-stock/ -d --openai
 
-    # With custom embedding model
+    # With local Qwen model
     python scripts/ingest_news_vectors.py ./data/news/ -d \\
         --model-path D:/models/Qwen3-Embedding-4B
 
     # Check stats only
     python scripts/ingest_news_vectors.py --stats
+
+    # Clear existing data and re-ingest
+    python scripts/ingest_news_vectors.py ./data/news/ -d --openai --clear
         """,
     )
 
@@ -75,6 +79,27 @@ Examples:
         help="Treat input_path as directory and ingest all CSVs",
     )
 
+    # Embedding model options
+    model_group = parser.add_mutually_exclusive_group()
+
+    model_group.add_argument(
+        "--openai",
+        action="store_true",
+        help="Use OpenAI API for embeddings (requires OPENAI_API_KEY env var)",
+    )
+
+    model_group.add_argument(
+        "--model-path",
+        default=None,
+        help="Path to local embedding model (e.g., D:/models/Qwen3-Embedding-4B)",
+    )
+
+    parser.add_argument(
+        "--openai-model",
+        default="text-embedding-3-small",
+        help="OpenAI model name (default: text-embedding-3-small)",
+    )
+
     parser.add_argument(
         "--persist-dir",
         default="./data/vector_db",
@@ -82,28 +107,28 @@ Examples:
     )
 
     parser.add_argument(
-        "--model-path",
-        default=None,
-        help="Path to local embedding model (e.g., D:/models/Qwen3-Embedding-4B)",
-    )
-
-    parser.add_argument(
         "--no-4bit",
         action="store_true",
-        help="Disable 4-bit quantization (uses more VRAM)",
+        help="Disable 4-bit quantization for local models",
     )
 
     parser.add_argument(
         "--batch-size",
         type=int,
         default=500,
-        help="Batch size for processing (default: 500)",
+        help="Batch size for CSV processing (default: 500)",
     )
 
     parser.add_argument(
         "--stats",
         action="store_true",
         help="Show vector store statistics and exit",
+    )
+
+    parser.add_argument(
+        "--clear",
+        action="store_true",
+        help="Clear existing vector store before ingesting",
     )
 
     parser.add_argument(
@@ -118,11 +143,32 @@ Examples:
 
     logger = logging.getLogger(__name__)
 
+    # Create embedder based on arguments
+    embedder = None
+    if args.openai:
+        logger.info(f"Using OpenAI embeddings: {args.openai_model}")
+        embedder = OpenAIEmbedder(model=args.openai_model)
+    elif args.model_path:
+        logger.info(f"Using local model: {args.model_path}")
+        embedder = QwenEmbedder(
+            model_path=args.model_path,
+            use_4bit=not args.no_4bit,
+        )
+
+    # Clear existing data if requested
+    if args.clear:
+        import shutil
+        persist_path = Path(args.persist_dir)
+        if persist_path.exists():
+            logger.warning(f"Clearing existing vector store at {persist_path}")
+            shutil.rmtree(persist_path)
+
     # Initialize store
     logger.info("Initializing vector store...")
     store = FinancialNewsStore(
         persist_dir=args.persist_dir,
-        model_path=args.model_path,
+        embedder=embedder,
+        model_path=args.model_path if not args.openai else None,
         use_4bit=not args.no_4bit,
     )
 

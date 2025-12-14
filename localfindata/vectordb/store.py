@@ -222,13 +222,25 @@ class FinancialNewsStore:
         # Filter out existing documents
         new_documents = [doc for doc in documents if doc.news_id not in existing_ids]
 
+        # Deduplicate within the batch (keep first occurrence)
+        seen_ids = set()
+        unique_documents = []
+        for doc in new_documents:
+            if doc.news_id not in seen_ids:
+                seen_ids.add(doc.news_id)
+                unique_documents.append(doc)
+
+        duplicates_in_batch = len(new_documents) - len(unique_documents)
+        new_documents = unique_documents
+
         if not new_documents:
             logger.info("No new documents to add")
             return 0
 
         logger.info(
             f"Adding {len(new_documents)} new documents "
-            f"({len(documents) - len(new_documents)} duplicates skipped)"
+            f"({len(documents) - len(new_documents)} duplicates skipped, "
+            f"{duplicates_in_batch} duplicates within batch)"
         )
 
         # Process in batches

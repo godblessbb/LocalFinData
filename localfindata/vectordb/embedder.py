@@ -214,6 +214,147 @@ class QwenEmbedder(BaseEmbedder):
         return sum_embeddings / sum_mask
 
 
+class OpenAIEmbedder(BaseEmbedder):
+    """
+    OpenAI Embedding API wrapper.
+
+    Fast and cost-effective for large-scale embedding.
+    Price: $0.02/1M tokens (text-embedding-3-small)
+
+    Usage:
+        embedder = OpenAIEmbedder(api_key="sk-xxx")
+        embeddings = embedder.encode(["Hello world", "Financial news"])
+
+    Environment variable:
+        Set OPENAI_API_KEY to avoid passing api_key explicitly.
+    """
+
+    # Embedding dimensions for each model
+    MODEL_DIMENSIONS = {
+        "text-embedding-3-small": 1536,
+        "text-embedding-3-large": 3072,
+        "text-embedding-ada-002": 1536,
+    }
+
+    def __init__(
+        self,
+        model: str = "text-embedding-3-small",
+        api_key: Optional[str] = None,
+        batch_size: int = 100,  # OpenAI recommends batches of ~100
+        max_retries: int = 3,
+    ):
+        """
+        Initialize OpenAI embedder.
+
+        Args:
+            model: Model name (text-embedding-3-small recommended)
+            api_key: OpenAI API key (or set OPENAI_API_KEY env var)
+            batch_size: Batch size for API calls
+            max_retries: Number of retries on API errors
+        """
+        self.model = model
+        self.batch_size = batch_size
+        self.max_retries = max_retries
+        self._client = None
+        self._api_key = api_key
+
+    def _get_client(self):
+        """Lazy load OpenAI client."""
+        if self._client is None:
+            import os
+            try:
+                from openai import OpenAI
+            except ImportError:
+                raise ImportError(
+                    "openai package not installed. Install with: pip install openai"
+                )
+
+            api_key = self._api_key or os.environ.get("OPENAI_API_KEY")
+            if not api_key:
+                raise ValueError(
+                    "OpenAI API key not provided. Set OPENAI_API_KEY environment "
+                    "variable or pass api_key parameter."
+                )
+
+            self._client = OpenAI(api_key=api_key)
+            logger.info(f"OpenAI client initialized. Model: {self.model}")
+
+        return self._client
+
+    @property
+    def dimension(self) -> int:
+        """Return the embedding dimension."""
+        return self.MODEL_DIMENSIONS.get(self.model, 1536)
+
+    def encode(
+        self,
+        texts: Union[str, List[str]],
+        show_progress: bool = False,
+    ) -> np.ndarray:
+        """
+        Encode text(s) into embeddings using OpenAI API.
+
+        Args:
+            texts: Single text or list of texts to encode
+            show_progress: Whether to show progress bar
+
+        Returns:
+            numpy array of shape (n_texts, dimension)
+        """
+        import time
+
+        client = self._get_client()
+
+        if isinstance(texts, str):
+            texts = [texts]
+
+        all_embeddings = []
+
+        # Process in batches
+        iterator = range(0, len(texts), self.batch_size)
+        if show_progress:
+            try:
+                from tqdm import tqdm
+                iterator = tqdm(
+                    iterator,
+                    desc="OpenAI Embedding",
+                    total=(len(texts) + self.batch_size - 1) // self.batch_size,
+                )
+            except ImportError:
+                pass
+
+        for i in iterator:
+            batch_texts = texts[i : i + self.batch_size]
+
+            # Retry logic
+            for attempt in range(self.max_retries):
+                try:
+                    response = client.embeddings.create(
+                        model=self.model,
+                        input=batch_texts,
+                    )
+
+                    # Extract embeddings in correct order
+                    batch_embeddings = [None] * len(batch_texts)
+                    for item in response.data:
+                        batch_embeddings[item.index] = item.embedding
+
+                    all_embeddings.extend(batch_embeddings)
+                    break
+
+                except Exception as e:
+                    if attempt < self.max_retries - 1:
+                        wait_time = 2 ** attempt  # Exponential backoff
+                        logger.warning(
+                            f"OpenAI API error: {e}. Retrying in {wait_time}s..."
+                        )
+                        time.sleep(wait_time)
+                    else:
+                        raise
+
+        return np.array(all_embeddings)
+
+
 class SentenceTransformerEmbedder(BaseEmbedder):
     """
     Fallback embedder using sentence-transformers library.

@@ -9,6 +9,7 @@ chromadb>=0.4.0
 transformers>=4.36.0
 torch>=2.0.0
 tqdm>=4.65.0
+openai>=1.0.0  # For OpenAI embedding API
 
 # Optional: for 4-bit quantization (recommended for large models)
 # bitsandbytes>=0.41.0  # Uncomment if using 4-bit quantization
