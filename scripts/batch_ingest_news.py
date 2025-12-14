@@ -357,6 +357,21 @@ def ingest_results(
 
     logger.info(f"ChromaDB collection ready. Current count: {collection.count()}")
 
+    # Get existing IDs to skip duplicates
+    existing_ids = set()
+    if collection.count() > 0:
+        logger.info("Checking for existing documents...")
+        # Get all IDs from the collection
+        all_ids = list(doc_metadata.keys())
+        for i in range(0, len(all_ids), 1000):
+            batch_ids = all_ids[i:i+1000]
+            try:
+                result = collection.get(ids=batch_ids)
+                existing_ids.update(result["ids"])
+            except Exception:
+                pass
+        logger.info(f"Found {len(existing_ids)} existing documents to skip")
+
     # Process results
     batch_size = 500
     ids_batch = []
@@ -399,6 +414,11 @@ def ingest_results(
                 # Get document metadata
                 doc_meta = doc_metadata.get(custom_id)
                 if not doc_meta:
+                    skipped_count += 1
+                    continue
+
+                # Skip if already exists in ChromaDB
+                if custom_id in existing_ids:
                     skipped_count += 1
                     continue
 
