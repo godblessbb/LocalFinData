@@ -1,5 +1,5 @@
 """
-CSV batch ingestion for financial news.
+CSV batch ingestion for financial news-futu-stock.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class NewsIngester:
     """
-    Batch ingestion of financial news from CSV files.
+    Batch ingestion of financial news-futu-stock from CSV files.
 
     Expected CSV format:
         symbol,news_date,source,news_title,news_content,price_change_1d,...
@@ -26,10 +26,10 @@ class NewsIngester:
         ingester = NewsIngester(store)
 
         # Ingest single file
-        ingester.ingest_file("./data/news/AAPL.csv")
+        ingester.ingest_file("./data/news-futu-stock/AAPL.csv")
 
         # Ingest entire directory
-        ingester.ingest_directory("./data/news-yh-stock/")
+        ingester.ingest_directory("./data/news-futu-stock-yh-stock/")
     """
 
     def __init__(
@@ -53,7 +53,7 @@ class NewsIngester:
         show_progress: bool = True,
     ) -> int:
         """
-        Ingest news from a single CSV file.
+        Ingest news-futu-stock from a single CSV file.
 
         Args:
             file_path: Path to CSV file

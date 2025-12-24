@@ -5,7 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="dd05e32e-d26c-4e05-93a5-0d9970723695" name="更改" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/LocalFinData.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/LocalFinData.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/localfindata/vectordb/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/localfindata/vectordb/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/localfindata/vectordb/embedder.py" beforeDir="false" afterPath="$PROJECT_DIR$/localfindata/vectordb/embedder.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/localfindata/vectordb/ingest.py" beforeDir="false" afterPath="$PROJECT_DIR$/localfindata/vectordb/ingest.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/localfindata/vectordb/search.py" beforeDir="false" afterPath="$PROJECT_DIR$/localfindata/vectordb/search.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/localfindata/vectordb/store.py" beforeDir="false" afterPath="$PROJECT_DIR$/localfindata/vectordb/store.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/batch_ingest_news.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/batch_ingest_news.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/data_dealer.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/data_dealer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/ingest_news_vectors.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/ingest_news_vectors.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -45,18 +54,18 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "claude/setup-python-environment-01CtHbjR9DhbK7YWdu8ZHo44",
-    "ignore.virus.scanning.warn.message": "true",
-    "last_opened_file_path": "D:/GitHub/LocalFinData",
-    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;claude/llamaindex-vector-db-01NwFivYcYETvvnaSBepWn3k&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/GitHub/LocalFinData&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
   }
-}]]></component>
+}</component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>

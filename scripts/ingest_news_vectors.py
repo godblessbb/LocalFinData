@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-CLI script for ingesting financial news into the vector database.
+CLI script for ingesting financial news-futu-stock into the vector database.
 
 Usage:
     # Ingest with OpenAI (recommended - fast and cheap)
-    python scripts/ingest_news_vectors.py ./data/news/AAPL.csv --openai
+    python scripts/ingest_news_vectors.py ./data/news-futu-stock/AAPL.csv --openai
 
     # Ingest entire directory with OpenAI
-    python scripts/ingest_news_vectors.py ./data/news-yh-stock/ -d --openai
+    python scripts/ingest_news_vectors.py ./data/news-futu-stock-yh-stock/ -d --openai
 
     # Ingest with local model
-    python scripts/ingest_news_vectors.py ./data/news/ -d \
+    python scripts/ingest_news_vectors.py ./data/news-futu-stock/ -d \
         --model-path D:/models/Qwen3-Embedding-4B
 
     # Check stats only
@@ -44,25 +44,25 @@ def setup_logging(verbose: bool = False):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Ingest financial news CSVs into vector database",
+        description="Ingest financial news-futu-stock CSVs into vector database",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
     # Ingest with OpenAI API (fast, ~$0.02/1M tokens)
-    python scripts/ingest_news_vectors.py ./data/news/AAPL.csv --openai
+    python scripts/ingest_news_vectors.py ./data/news-futu-stock/AAPL.csv --openai
 
     # Ingest directory with OpenAI
-    python scripts/ingest_news_vectors.py ./data/news-yh-stock/ -d --openai
+    python scripts/ingest_news_vectors.py ./data/news-futu-stock-yh-stock/ -d --openai
 
     # With local Qwen model
-    python scripts/ingest_news_vectors.py ./data/news/ -d \\
+    python scripts/ingest_news_vectors.py ./data/news-futu-stock/ -d \\
         --model-path D:/models/Qwen3-Embedding-4B
 
     # Check stats only
     python scripts/ingest_news_vectors.py --stats
 
     # Clear existing data and re-ingest
-    python scripts/ingest_news_vectors.py ./data/news/ -d --openai --clear
+    python scripts/ingest_news_vectors.py ./data/news-futu-stock/ -d --openai --clear
         """,
     )
 

@@ -43,7 +43,7 @@ class QwenEmbedder(BaseEmbedder):
         embedder = QwenEmbedder(model_path="path/to/model", use_4bit=False)
 
         # Encode texts
-        embeddings = embedder.encode(["Hello world", "Financial news"])
+        embeddings = embedder.encode(["Hello world", "Financial news-futu-stock"])
     """
 
     def __init__(
@@ -223,7 +223,7 @@ class OpenAIEmbedder(BaseEmbedder):
 
     Usage:
         embedder = OpenAIEmbedder(api_key="sk-xxx")
-        embeddings = embedder.encode(["Hello world", "Financial news"])
+        embeddings = embedder.encode(["Hello world", "Financial news-futu-stock"])
 
     Environment variable:
         Set OPENAI_API_KEY to avoid passing api_key explicitly.

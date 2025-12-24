@@ -1,5 +1,5 @@
 """
-ChromaDB-based vector store for financial news.
+ChromaDB-based vector store for financial news-futu-stock.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class NewsDocument:
-    """Represents a financial news document."""
+    """Represents a financial news-futu-stock document."""
 
     news_id: str
     symbol: str
@@ -102,7 +102,7 @@ class NewsDocument:
 
 class FinancialNewsStore:
     """
-    ChromaDB-based vector store for financial news.
+    ChromaDB-based vector store for financial news-futu-stock.
 
     Usage:
         # Initialize
@@ -299,7 +299,7 @@ class FinancialNewsStore:
         top_k: int = 20,
     ) -> List[Dict[str, Any]]:
         """
-        Search for similar news with optional filters.
+        Search for similar news-futu-stock with optional filters.
 
         Args:
             query: Semantic search query (can be empty for filter-only search)
@@ -307,7 +307,7 @@ class FinancialNewsStore:
             sectors: Filter by sectors (e.g., ["Healthcare", "Technology"])
             date_from: Filter by date range start (YYYY-MM-DD)
             date_to: Filter by date range end (YYYY-MM-DD)
-            sources: Filter by news sources
+            sources: Filter by news-futu-stock sources
             min_price_change_1d: Minimum 1-day price change
             max_price_change_1d: Maximum 1-day price change
             top_k: Number of results to return

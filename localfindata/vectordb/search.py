@@ -1,7 +1,7 @@
 """
 Search API for external agents.
 
-This module provides a clean interface for agents to search financial news
+This module provides a clean interface for agents to search financial news-futu-stock
 with semantic queries and structured filters.
 """
 
@@ -30,10 +30,10 @@ class SearchResult:
         title: News title
         content: News content
         similarity: Similarity score (0-1, higher is better)
-        price_change_1d: 1-day price change after news
-        price_change_3d: 3-day price change after news
-        price_change_5d: 5-day price change after news
-        price_change_10d: 10-day price change after news
+        price_change_1d: 1-day price change after news-futu-stock
+        price_change_3d: 3-day price change after news-futu-stock
+        price_change_5d: 5-day price change after news-futu-stock
+        price_change_10d: 10-day price change after news-futu-stock
     """
 
     id: str
@@ -68,8 +68,8 @@ class SearchAPI:
     High-level search API for external agents.
 
     This class provides a clean, agent-friendly interface for searching
-    financial news. It's designed to be called by AI agents that need
-    to find relevant historical news events.
+    financial news-futu-stock. It's designed to be called by AI agents that need
+    to find relevant historical news-futu-stock events.
 
     Usage:
         api = SearchAPI(persist_dir="./data/vector_db")
@@ -146,7 +146,7 @@ class SearchAPI:
         top_k: int = 20,
     ) -> List[SearchResult]:
         """
-        Search for similar news with optional filters.
+        Search for similar news-futu-stock with optional filters.
 
         This is the main search method that combines semantic similarity
         with structured filters.
@@ -157,7 +157,7 @@ class SearchAPI:
             sectors: Filter by sectors (e.g., ["Healthcare"])
             date_from: Start date (YYYY-MM-DD)
             date_to: End date (YYYY-MM-DD)
-            sources: Filter by news sources
+            sources: Filter by news-futu-stock sources
             min_price_change: Minimum 1-day price change (e.g., 0.05 for 5%)
             max_price_change: Maximum 1-day price change
             top_k: Number of results to return
@@ -166,7 +166,7 @@ class SearchAPI:
             List of SearchResult objects, sorted by relevance
 
         Example:
-            # Find news about trade tensions affecting tech stocks
+            # Find news-futu-stock about trade tensions affecting tech stocks
             results = api.search(
                 query="US China trade war technology semiconductor",
                 symbols=["NVDA", "AMD", "INTC"],
@@ -201,7 +201,7 @@ class SearchAPI:
         """
         Search using only filters, without semantic query.
 
-        Useful when you want to retrieve news based purely on
+        Useful when you want to retrieve news-futu-stock based purely on
         structured criteria without semantic matching.
 
         Args:
@@ -209,7 +209,7 @@ class SearchAPI:
             sectors: Filter by sectors
             date_from: Start date (YYYY-MM-DD)
             date_to: End date (YYYY-MM-DD)
-            sources: Filter by news sources
+            sources: Filter by news-futu-stock sources
             min_price_change: Minimum 1-day price change
             max_price_change: Maximum 1-day price change
             top_k: Number of results to return
@@ -218,7 +218,7 @@ class SearchAPI:
             List of SearchResult objects
 
         Example:
-            # Get all major news events (5%+ price move) for healthcare sector
+            # Get all major news-futu-stock events (5%+ price move) for healthcare sector
             results = api.search_by_filters(
                 sectors=["Healthcare", "Biotech"],
                 min_price_change=0.05,
@@ -248,21 +248,21 @@ class SearchAPI:
         top_k: int = 10,
     ) -> List[SearchResult]:
         """
-        Find historically similar news events.
+        Find historically similar news-futu-stock events.
 
-        Given a reference news text, find similar events from the past.
+        Given a reference news-futu-stock text, find similar events from the past.
         This is useful for analyzing "what happened last time when
-        similar news occurred".
+        similar news-futu-stock occurred".
 
         Args:
-            reference_text: The reference news content to find similar events for
+            reference_text: The reference news-futu-stock content to find similar events for
             exclude_symbols: Symbols to exclude (e.g., exclude the same stock)
             include_symbols: Only include these symbols
             date_before: Only return events before this date
             top_k: Number of results to return
 
         Returns:
-            List of historically similar news events
+            List of historically similar news-futu-stock events
 
         Example:
             # Find what happened historically when Apple had tariff concerns

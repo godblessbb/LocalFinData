@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Batch API ingestion for financial news using OpenAI Batch API.
+Batch API ingestion for financial news-futu-stock using OpenAI Batch API.
 
 This script uses OpenAI's Batch API which is 50% cheaper than real-time API.
 The trade-off is that it takes up to 24 hours to complete.
 
 Usage:
     # Step 1: Prepare batch request file
-    python scripts/batch_ingest_news.py prepare D:/GitHub/LocalFinData/data/news-yh-stock/
+    python scripts/batch_ingest_news.py prepare D:/GitHub/LocalFinData/data/news-futu-stock-yh-stock/
 
     # Step 2: Submit batch job
     python scripts/batch_ingest_news.py submit
@@ -128,7 +128,7 @@ def prepare_batch_requests(
     Read all CSVs and prepare batch request JSONL files (chunked).
 
     Args:
-        news_dir: Directory containing news CSVs
+        news_dir: Directory containing news-futu-stock CSVs
         output_dir: Directory to write chunk files
         persist_dir: ChromaDB persist directory (for checking existing docs)
         skip_existing: If True, skip documents already in ChromaDB
@@ -347,7 +347,7 @@ def submit_batch(metadata_file: Path, chunk_index: int = None) -> List[str]:
                 endpoint="/v1/embeddings",
                 completion_window="24h",
                 metadata={
-                    "description": f"Financial news embeddings - {chunk_path.name}"
+                    "description": f"Financial news-futu-stock embeddings - {chunk_path.name}"
                 }
             )
 
@@ -691,7 +691,7 @@ def ingest_results(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Batch API ingestion for financial news (chunked for large datasets)",
+        description="Batch API ingestion for financial news-futu-stock (chunked for large datasets)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Steps:
@@ -702,7 +702,7 @@ Steps:
   5. ingest              - Ingest all embeddings into ChromaDB
 
 Example workflow:
-  python scripts/batch_ingest_news.py prepare ./data/news-yh-stock/
+  python scripts/batch_ingest_news.py prepare ./data/news-futu-stock-yh-stock/
   python scripts/batch_ingest_news.py submit
   python scripts/batch_ingest_news.py status  # repeat until all complete
   python scripts/batch_ingest_news.py download
@@ -716,7 +716,7 @@ For large datasets (600K+ docs), files are split into 40K chunks automatically.
 
     # Prepare command
     prepare_parser = subparsers.add_parser("prepare", help="Prepare batch request files")
-    prepare_parser.add_argument("news_dir", help="Directory containing news CSVs")
+    prepare_parser.add_argument("news_dir", help="Directory containing news-futu-stock CSVs")
     prepare_parser.add_argument(
         "--persist-dir",
         default="./data/vector_db",

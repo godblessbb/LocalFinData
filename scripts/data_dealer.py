@@ -1,63 +1,195 @@
-import pandas as pd
+# inspect_aapl_csvs_no_missing_row.py
+# -*- coding: utf-8 -*-
+
+import json
 from pathlib import Path
+import pandas as pd
+import numpy as np
 
-# 目录
-news_dir = Path(r"D:\GitHub\LocalFinData\data\news-yh-stock")
+FILES = {
+    "futu_news": r"D:\GitHub\LocalFinData\data\news-futu-stock\AAPL.csv",
+    "yahoo_news": r"D:\GitHub\LocalFinData\data\news-yh-stock\AAPL.csv",
+    "local_price_data": r"D:\GitHub\LocalFinData\data\prices\AAPL.csv",
+}
 
-# 获取所有csv文件
-news_files = list(news_dir.glob("*.csv"))
-print(f"news-yh-stock 目录: {len(news_files)} 个CSV文件\n")
+# 输出 JSON 文件
+OUTPUT_JSON = r"D:\GitHub\LocalFinData\aapl_schema_snapshot.json"
 
-total_chars = 0
-total_rows = 0
-error_files = []
+DT_HINTS = ("date", "time", "datetime", "published", "scraped", "created", "updated", "at")
 
-for news_file in news_files:
+
+def is_null_like(v) -> bool:
+    """识别 NaN/NaT/None/空字符串/仅空白"""
+    if v is None:
+        return True
     try:
-        # 读取文件内容统计字符数
-        with open(news_file, 'r', encoding='utf-8') as f:
-            content = f.read()
-            total_chars += len(content)
+        if pd.isna(v):
+            return True
+    except Exception:
+        pass
+    if isinstance(v, str) and v.strip() == "":
+        return True
+    return False
 
-        # 统计行数
-        df = pd.read_csv(news_file)
-        total_rows += len(df)
 
+def infer_scalar_type(value, col_name: str | None = None) -> str:
+    """对单个值做类型推断：null/bool/int/float/datetime/str/other"""
+    if is_null_like(value):
+        return "null"
+
+    # numpy 标量转 python 标量
+    if isinstance(value, (np.generic,)):
+        value = value.item()
+
+    if isinstance(value, (bool, np.bool_)):
+        return "bool"
+
+    if isinstance(value, (int, np.integer)) and not isinstance(value, bool):
+        return "int"
+
+    if isinstance(value, (float, np.floating)):
+        return "float"
+
+    if isinstance(value, pd.Timestamp):
+        return "datetime"
+
+    if isinstance(value, str):
+        s = value.strip()
+        low = s.lower()
+
+        if low in ("true", "false"):
+            return "bool"
+
+        # int 尝试
+        try:
+            # 排除 1e3 这类科学计数法（int会失败，float能成功）
+            if "e" not in low and "." not in low:
+                int(s)
+                return "int"
+        except Exception:
+            pass
+
+        # float 尝试
+        try:
+            float(s)
+            return "float"
+        except Exception:
+            pass
+
+        # datetime 尝试：列名带时间提示更优先
+        try_dt = True
+        if col_name:
+            if any(h in col_name.lower() for h in DT_HINTS):
+                dt = pd.to_datetime(s, errors="coerce")
+                if not pd.isna(dt):
+                    return "datetime"
+            else:
+                # 没提示也试一次，但不强求
+                dt = pd.to_datetime(s, errors="coerce", infer_datetime_format=True)
+                if not pd.isna(dt):
+                    return "datetime"
+        elif try_dt:
+            dt = pd.to_datetime(s, errors="coerce", infer_datetime_format=True)
+            if not pd.isna(dt):
+                return "datetime"
+
+        return "str"
+
+    return "other"
+
+
+def find_first_complete_row(df: pd.DataFrame) -> tuple[int | None, dict | None]:
+    """
+    找到第一条“全列都非空”的行。
+    返回 (row_index, row_dict)；若不存在返回 (None, None)
+    """
+    if df.shape[0] == 0:
+        return None, None
+
+    # 标准化：把纯空白字符串当作 NA
+    # 注意：df 这里是 dtype=str 读入，空值可能是 NaN 或空串
+    work = df.copy()
+
+    # 将空白串统一为 NaN，便于 isna 判定
+    for c in work.columns:
+        work[c] = work[c].apply(lambda x: np.nan if (isinstance(x, str) and x.strip() == "") else x)
+
+    # 找“全非空”的第一行
+    mask_complete = work.notna().all(axis=1)
+    idxs = np.flatnonzero(mask_complete.values)
+    if len(idxs) == 0:
+        return None, None
+
+    i = int(idxs[0])
+    return i, df.iloc[i].to_dict()
+
+
+def analyze_csv(path: str) -> dict:
+    p = Path(path)
+    if not p.exists():
+        return {"path": str(p), "error": "file_not_found"}
+
+    try:
+        # dtype=str：尽量保留原始文本；keep_default_na=True：识别 NA/NaN
+        df = pd.read_csv(p, dtype=str, keep_default_na=True)
     except Exception as e:
-        error_files.append(f"{news_file.name}: {e}")
+        return {"path": str(p), "error": f"read_csv_failed: {e}"}
 
-# Token估算（不同语言比例不同）
-tokens_english = total_chars / 4  # 英文约4字符=1token
-tokens_mixed = total_chars / 3  # 中英混合约3字符=1token
-tokens_chinese = total_chars / 1.5  # 中文约1.5字符=1token
+    columns = list(df.columns)
+    rows, cols = int(df.shape[0]), int(df.shape[1])
 
-# gpt-5-nano 价格: $0.05 / 1M tokens
-price_per_million = 0.05
+    if rows == 0:
+        return {
+            "path": str(p),
+            "columns": columns,
+            "sample_row_index": None,
+            "sample_row": None,
+            "column_types": {c: "null" for c in columns},
+            "rows": 0,
+            "cols": cols,
+            "note": "empty_file",
+        }
 
-cost_english = (tokens_english / 1_000_000) * price_per_million
-cost_mixed = (tokens_mixed / 1_000_000) * price_per_million
-cost_chinese = (tokens_chinese / 1_000_000) * price_per_million
+    sample_idx, sample_row = find_first_complete_row(df)
 
-# 打印结果
-print(f"{'=' * 60}")
-print(f"统计结果:")
-print(f"{'=' * 60}")
-print(f"  文件数量: {len(news_files)} 个")
-print(f"  数据行数: {total_rows:,} 行")
-print(f"  总字符数: {total_chars:,} 字符")
-print(f"{'=' * 60}")
-print(f"\nToken估算:")
-print(f"  英文为主 (4字符/token):   {tokens_english:,.0f} tokens")
-print(f"  中英混合 (3字符/token):   {tokens_mixed:,.0f} tokens")
-print(f"  中文为主 (1.5字符/token): {tokens_chinese:,.0f} tokens")
-print(f"{'=' * 60}")
-print(f"\ngpt-5-nano 成本估算 ($0.05/1M tokens):")
-print(f"  英文为主:   ${cost_english:.4f}")
-print(f"  中英混合:   ${cost_mixed:.4f}")
-print(f"  中文为主:   ${cost_chinese:.4f}")
-print(f"{'=' * 60}")
+    if sample_row is None:
+        # 没有任何“全非空”行
+        return {
+            "path": str(p),
+            "columns": columns,
+            "sample_row_index": None,
+            "sample_row": None,
+            "column_types": {c: "unknown" for c in columns},
+            "rows": rows,
+            "cols": cols,
+            "note": "no_row_without_missing_values",
+        }
 
-if error_files:
-    print(f"\n处理出错: {len(error_files)} 个")
-    for e in error_files:
-        print(f"  {e}")
+    # 用“完整样本行”做类型推断（每列一定有值，不会被 NaN 干扰）
+    col_types = {c: infer_scalar_type(sample_row.get(c), c) for c in columns}
+
+    return {
+        "path": str(p),
+        "columns": columns,
+        "sample_row_index": int(sample_idx),
+        "sample_row": sample_row,
+        "column_types": col_types,
+        "rows": rows,
+        "cols": cols,
+        "note": "sample_row_is_first_row_with_no_missing_values",
+    }
+
+
+def main():
+    result = {"sources": {}}
+    for source_name, file_path in FILES.items():
+        result["sources"][source_name] = analyze_csv(file_path)
+
+    out_path = Path(OUTPUT_JSON)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"Saved JSON -> {out_path}")
+
+
+if __name__ == "__main__":
+    main()

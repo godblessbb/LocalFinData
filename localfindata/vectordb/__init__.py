@@ -1,7 +1,7 @@
 """
 Financial News Vector Database Module
 
-A lightweight vector search system for financial news with:
+A lightweight vector search system for financial news-futu-stock with:
 - Local embedding model support (Qwen3-Embedding-4B with 4-bit quantization)
 - ChromaDB for vector storage
 - Structured filtering (symbol, date, sector, price change)
@@ -21,7 +21,7 @@ Quick Start:
     # Ingest new data
     store = FinancialNewsStore(persist_dir="./data/vector_db")
     ingester = NewsIngester(store)
-    ingester.ingest_directory("./data/news-yh-stock/")
+    ingester.ingest_directory("./data/news-futu-stock-yh-stock/")
 """
 
 from .store import FinancialNewsStore, NewsDocument
