@@ -26,6 +26,7 @@ def plot_candlestick_with_ma(
     ma_periods: dict = None,
     figsize: tuple = (16, 10),
     dpi: int = 150,
+    no_legend: bool = False,
 ):
     """
     Generate candlestick chart with moving averages.
@@ -39,6 +40,7 @@ def plot_candlestick_with_ma(
         ma_periods: Dict of MA type -> list of periods to include, e.g. {'ema': [5,20,50], 'sma': [10,20]}
         figsize: Figure size (width, height)
         dpi: Output resolution
+        no_legend: Hide all text labels, legends, titles, and axis labels
 
     Returns:
         Path to saved chart
@@ -153,13 +155,10 @@ def plot_candlestick_with_ma(
             ax.plot([date - width/2, date + width/2], [close_p, close_p],
                    color=color, linewidth=1.5, zorder=2)
 
-    # Color palette for different MA types
+    # Color palette for different MA types - distinct colors for each period
     ma_colors = {
-        'ema': ['#2196F3', '#1976D2', '#1565C0', '#0D47A1', '#0288D1', '#0277BD',
-                '#01579B', '#039BE5', '#03A9F4', '#29B6F6', '#4FC3F7', '#81D4FA',
-                '#B3E5FC', '#E1F5FE', '#00BCD4', '#00ACC1'],
-        'sma': ['#FF9800', '#F57C00', '#EF6C00', '#E65100', '#FB8C00', '#FFA726',
-                '#FFB74D', '#FFCC80', '#FFE0B2'],
+        'ema': ['#E91E63', '#9C27B0', '#673AB7', '#3F51B5', '#2196F3', '#00BCD4', '#009688'],  # Pink->Purple->Blue->Cyan->Teal
+        'sma': ['#FF9800', '#F57C00', '#EF6C00', '#E65100', '#FB8C00', '#FFA726', '#FFB74D'],
         'wma': ['#4CAF50', '#43A047', '#388E3C'],
         'dema': ['#9C27B0', '#8E24AA', '#7B1FA2'],
         'tema': ['#F44336', '#E53935', '#D32F2F'],
@@ -192,21 +191,28 @@ def plot_candlestick_with_ma(
                        label=f'{ma_type.upper()}({period})', alpha=0.85)
 
     # Formatting
-    ax.set_ylabel('Price (USD)', fontsize=12, fontweight='bold')
-    ax.set_xlabel('Date', fontsize=12, fontweight='bold')
-    ax.set_title(f'{ticker} Candlestick with Moving Averages\n{actual_start.date()} to {actual_end.date()}',
-                fontsize=14, fontweight='bold', pad=10)
-    ax.grid(True, alpha=0.3, linestyle='--', linewidth=0.5)
+    if no_legend:
+        # Hide all text: no title, no axis labels, no tick labels, no legend
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+        ax.tick_params(axis='both', which='both', length=0)
+        ax.grid(True, alpha=0.2, linestyle='--', linewidth=0.5)
+    else:
+        ax.set_ylabel('Price (USD)', fontsize=12, fontweight='bold')
+        ax.set_xlabel('Date', fontsize=12, fontweight='bold')
+        ax.set_title(f'{ticker} Candlestick with Moving Averages\n{actual_start.date()} to {actual_end.date()}',
+                    fontsize=14, fontweight='bold', pad=10)
+        ax.grid(True, alpha=0.3, linestyle='--', linewidth=0.5)
 
-    # Legend - multiple columns if many MAs
-    total_mas = sum(len(cols) for cols in ma_columns.values())
-    ncol = min(5, max(2, total_mas // 8 + 1))
-    ax.legend(loc='upper left', fontsize=8, framealpha=0.9, ncol=ncol)
+        # Legend - multiple columns if many MAs
+        total_mas = sum(len(cols) for cols in ma_columns.values())
+        ncol = min(5, max(2, total_mas // 8 + 1))
+        ax.legend(loc='upper left', fontsize=8, framealpha=0.9, ncol=ncol)
 
-    # Format x-axis dates
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
-    ax.xaxis.set_major_locator(mdates.AutoDateLocator())
-    plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha='right')
+        # Format x-axis dates
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+        ax.xaxis.set_major_locator(mdates.AutoDateLocator())
+        plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha='right')
 
     plt.tight_layout()
 
@@ -268,6 +274,8 @@ Examples:
     parser.add_argument('--dpi', type=int, default=150, help='Output resolution (default: 150)')
     parser.add_argument('--figsize', type=str, default='16,10',
                        help='Figure size as width,height (default: 16,10)')
+    parser.add_argument('--no-legend', action='store_true',
+                       help='Hide all text labels, legends, titles, and axis labels')
 
     args = parser.parse_args()
 
@@ -307,6 +315,7 @@ Examples:
         ma_periods=ma_periods if ma_periods else None,
         figsize=figsize,
         dpi=args.dpi,
+        no_legend=args.no_legend,
     )
 
 
