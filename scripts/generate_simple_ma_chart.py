@@ -23,6 +23,7 @@ def plot_candlestick_with_ma(
     days: int = 20,
     output_file: str = None,
     ma_types: list = None,
+    ma_periods: dict = None,
     figsize: tuple = (16, 10),
     dpi: int = 150,
 ):
@@ -35,6 +36,7 @@ def plot_candlestick_with_ma(
         days: Number of trading days to show
         output_file: Output file path (optional, will auto-generate if not provided)
         ma_types: List of MA types to include ['ema', 'sma', 'wma', 'dema', 'tema']
+        ma_periods: Dict of MA type -> list of periods to include, e.g. {'ema': [5,20,50], 'sma': [10,20]}
         figsize: Figure size (width, height)
         dpi: Output resolution
 
@@ -44,6 +46,10 @@ def plot_candlestick_with_ma(
     # Default MA types
     if ma_types is None:
         ma_types = ['ema', 'sma', 'wma', 'dema', 'tema']
+
+    # Default: include all periods if not specified
+    if ma_periods is None:
+        ma_periods = {}
 
     # Load data
     print(f"Loading data from: {data_file}")
@@ -79,10 +85,19 @@ def plot_candlestick_with_ma(
     for col in df.columns:
         for ma_type in ma_types:
             if col.startswith(f'{ma_type}_'):
-                period = col.split('_')[1]
+                try:
+                    period = int(col.split('_')[1])
+                except (ValueError, IndexError):
+                    continue
+
+                # Filter by periods if specified for this MA type
+                if ma_type in ma_periods:
+                    if period not in ma_periods[ma_type]:
+                        continue
+
                 if ma_type not in ma_columns:
                     ma_columns[ma_type] = []
-                ma_columns[ma_type].append((col, int(period)))
+                ma_columns[ma_type].append((col, period))
 
     # Sort by period
     for ma_type in ma_columns:
@@ -226,6 +241,9 @@ Examples:
   # Only show specific MA types
   python generate_simple_ma_chart.py Sample_Data_AAPL.csv --ma-types ema,sma
 
+  # Filter specific periods for each MA type
+  python generate_simple_ma_chart.py Sample_Data_AAPL.csv --ma-types ema,sma --ema-periods 5,10,20,50,100,200 --sma-periods 3,5,10,20,60,100,200
+
   # Custom output file
   python generate_simple_ma_chart.py Sample_Data_AAPL.csv -o my_chart.png
         """
@@ -237,6 +255,16 @@ Examples:
     parser.add_argument('--output', '-o', help='Output file path')
     parser.add_argument('--ma-types', type=str, default='ema,sma,wma,dema,tema',
                        help='MA types to include, comma-separated (default: ema,sma,wma,dema,tema)')
+    parser.add_argument('--ema-periods', type=str, default=None,
+                       help='EMA periods to include, comma-separated (e.g., 5,10,20,50,100,200)')
+    parser.add_argument('--sma-periods', type=str, default=None,
+                       help='SMA periods to include, comma-separated (e.g., 5,10,20,50,100,200)')
+    parser.add_argument('--wma-periods', type=str, default=None,
+                       help='WMA periods to include, comma-separated')
+    parser.add_argument('--dema-periods', type=str, default=None,
+                       help='DEMA periods to include, comma-separated')
+    parser.add_argument('--tema-periods', type=str, default=None,
+                       help='TEMA periods to include, comma-separated')
     parser.add_argument('--dpi', type=int, default=150, help='Output resolution (default: 150)')
     parser.add_argument('--figsize', type=str, default='16,10',
                        help='Figure size as width,height (default: 16,10)')
@@ -245,6 +273,22 @@ Examples:
 
     # Parse MA types
     ma_types = [t.strip().lower() for t in args.ma_types.split(',')]
+
+    # Parse MA periods for each type
+    ma_periods = {}
+    period_args = {
+        'ema': args.ema_periods,
+        'sma': args.sma_periods,
+        'wma': args.wma_periods,
+        'dema': args.dema_periods,
+        'tema': args.tema_periods,
+    }
+    for ma_type, periods_str in period_args.items():
+        if periods_str:
+            try:
+                ma_periods[ma_type] = [int(p.strip()) for p in periods_str.split(',')]
+            except ValueError:
+                print(f"Invalid {ma_type} periods format: {periods_str}")
 
     # Parse figsize
     try:
@@ -260,6 +304,7 @@ Examples:
         days=args.days,
         output_file=args.output,
         ma_types=ma_types,
+        ma_periods=ma_periods if ma_periods else None,
         figsize=figsize,
         dpi=args.dpi,
     )
