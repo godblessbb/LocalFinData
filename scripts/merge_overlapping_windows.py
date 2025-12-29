@@ -99,11 +99,11 @@ def recalculate_metrics(df: pd.DataFrame, start_date: pd.Timestamp, end_date: pd
     if len(calc_df) > 0 and calc_df['daily_return'].notna().any():
         pos_idx = calc_df['daily_return'].idxmax()
         anchor_a_pos_date = window_df.loc[pos_idx, 'date'].strftime('%Y-%m-%d')
-        anchor_a_pos_return = round(window_df.loc[pos_idx, 'daily_return'], 6)
+        anchor_a_pos_return = round(window_df.loc[pos_idx, 'daily_return'], 4)
 
         neg_idx = calc_df['daily_return'].idxmin()
         anchor_a_neg_date = window_df.loc[neg_idx, 'date'].strftime('%Y-%m-%d')
-        anchor_a_neg_return = round(window_df.loc[neg_idx, 'daily_return'], 6)
+        anchor_a_neg_return = round(window_df.loc[neg_idx, 'daily_return'], 4)
 
     # Anchor B+: max gap up / gap down
     anchor_b_pos_date = None
@@ -114,11 +114,11 @@ def recalculate_metrics(df: pd.DataFrame, start_date: pd.Timestamp, end_date: pd
     if len(calc_df) > 0 and calc_df['gap'].notna().any():
         pos_idx = calc_df['gap'].idxmax()
         anchor_b_pos_date = window_df.loc[pos_idx, 'date'].strftime('%Y-%m-%d')
-        anchor_b_pos_gap = round(window_df.loc[pos_idx, 'gap'], 6)
+        anchor_b_pos_gap = round(window_df.loc[pos_idx, 'gap'], 4)
 
         neg_idx = calc_df['gap'].idxmin()
         anchor_b_neg_date = window_df.loc[neg_idx, 'date'].strftime('%Y-%m-%d')
-        anchor_b_neg_gap = round(window_df.loc[neg_idx, 'gap'], 6)
+        anchor_b_neg_gap = round(window_df.loc[neg_idx, 'gap'], 4)
 
     # Anchor C: max volume z-score
     anchor_c_date = None
@@ -127,7 +127,7 @@ def recalculate_metrics(df: pd.DataFrame, start_date: pd.Timestamp, end_date: pd
     if window_df['volume_zscore'].notna().any():
         vol_idx = window_df['volume_zscore'].idxmax()
         anchor_c_date = window_df.loc[vol_idx, 'date'].strftime('%Y-%m-%d')
-        anchor_c_vol_zscore = round(window_df.loc[vol_idx, 'volume_zscore'], 6)
+        anchor_c_vol_zscore = round(window_df.loc[vol_idx, 'volume_zscore'], 4)
 
     return {
         'start_date': start_date.strftime('%Y-%m-%d'),
@@ -135,7 +135,7 @@ def recalculate_metrics(df: pd.DataFrame, start_date: pd.Timestamp, end_date: pd
         'duration': duration,
         'start_price': round(start_price, 4),
         'end_price': round(end_price, 4),
-        'price_change': round(price_change, 6),
+        'price_change': round(price_change, 4),
         'anchor_a_pos_date': anchor_a_pos_date,
         'anchor_a_pos_return': anchor_a_pos_return,
         'anchor_a_neg_date': anchor_a_neg_date,
