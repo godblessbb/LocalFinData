@@ -82,11 +82,11 @@ def calculate_price_changes(
                 continue
 
             # Pre-calculate values for anchors
-            # Absolute daily return
-            df['daily_return'] = df['close'].pct_change().abs()
+            # Daily return (with direction, not absolute)
+            df['daily_return'] = df['close'].pct_change()
 
-            # Gap: |open_t - close_{t-1}|
-            df['gap'] = (df['open'] - df['close'].shift(1)).abs()
+            # Gap: open_t - close_{t-1} (with direction, positive = gap up, negative = gap down)
+            df['gap'] = df['open'] - df['close'].shift(1)
 
             # Volume z-score (rolling would be better but use full period for simplicity)
             vol_mean = df['volume'].mean()
@@ -113,36 +113,57 @@ def calculate_price_changes(
 
                 price_change = (t10_close - t0_close) / t0_close
 
-                # Anchor A: Maximum absolute return day
+                # Anchor A: Maximum positive and negative return days
                 # Skip first day since daily_return is NaN
                 window_returns = window_df.iloc[1:].copy()
-                if len(window_returns) > 0 and window_returns['daily_return'].notna().any():
-                    anchor_a_idx = window_returns['daily_return'].idxmax()
-                    anchor_a_date = df.loc[anchor_a_idx, 'date'].strftime('%Y-%m-%d')
-                    anchor_a_value = round(df.loc[anchor_a_idx, 'daily_return'], 6)
-                else:
-                    anchor_a_date = None
-                    anchor_a_value = None
 
-                # Anchor B: Maximum gap day
+                # A+ : max positive return
+                anchor_a_pos_date = None
+                anchor_a_pos_value = None
+                # A- : max negative return (most negative)
+                anchor_a_neg_date = None
+                anchor_a_neg_value = None
+
+                if len(window_returns) > 0 and window_returns['daily_return'].notna().any():
+                    # Max positive return
+                    anchor_a_pos_idx = window_returns['daily_return'].idxmax()
+                    anchor_a_pos_date = df.loc[anchor_a_pos_idx, 'date'].strftime('%Y-%m-%d')
+                    anchor_a_pos_value = round(df.loc[anchor_a_pos_idx, 'daily_return'], 6)
+
+                    # Max negative return (min value)
+                    anchor_a_neg_idx = window_returns['daily_return'].idxmin()
+                    anchor_a_neg_date = df.loc[anchor_a_neg_idx, 'date'].strftime('%Y-%m-%d')
+                    anchor_a_neg_value = round(df.loc[anchor_a_neg_idx, 'daily_return'], 6)
+
+                # Anchor B: Maximum gap up and gap down days
                 # Skip first day since gap uses shift
                 window_gaps = window_df.iloc[1:].copy()
+
+                # B+ : max gap up (positive)
+                anchor_b_pos_date = None
+                anchor_b_pos_value = None
+                # B- : max gap down (most negative)
+                anchor_b_neg_date = None
+                anchor_b_neg_value = None
+
                 if len(window_gaps) > 0 and window_gaps['gap'].notna().any():
-                    anchor_b_idx = window_gaps['gap'].idxmax()
-                    anchor_b_date = df.loc[anchor_b_idx, 'date'].strftime('%Y-%m-%d')
-                    anchor_b_value = round(df.loc[anchor_b_idx, 'gap'], 6)
-                else:
-                    anchor_b_date = None
-                    anchor_b_value = None
+                    # Max gap up
+                    anchor_b_pos_idx = window_gaps['gap'].idxmax()
+                    anchor_b_pos_date = df.loc[anchor_b_pos_idx, 'date'].strftime('%Y-%m-%d')
+                    anchor_b_pos_value = round(df.loc[anchor_b_pos_idx, 'gap'], 6)
+
+                    # Max gap down (min value)
+                    anchor_b_neg_idx = window_gaps['gap'].idxmin()
+                    anchor_b_neg_date = df.loc[anchor_b_neg_idx, 'date'].strftime('%Y-%m-%d')
+                    anchor_b_neg_value = round(df.loc[anchor_b_neg_idx, 'gap'], 6)
 
                 # Anchor C: Maximum volume z-score day
+                anchor_c_date = None
+                anchor_c_value = None
                 if window_df['volume_zscore'].notna().any():
                     anchor_c_idx = window_df['volume_zscore'].idxmax()
                     anchor_c_date = df.loc[anchor_c_idx, 'date'].strftime('%Y-%m-%d')
                     anchor_c_value = round(df.loc[anchor_c_idx, 'volume_zscore'], 6)
-                else:
-                    anchor_c_date = None
-                    anchor_c_value = None
 
                 all_changes.append({
                     'start_date': t0_date.strftime('%Y-%m-%d'),
@@ -151,10 +172,14 @@ def calculate_price_changes(
                     'start_price': round(t0_close, 4),
                     'end_price': round(t10_close, 4),
                     'price_change': round(price_change, 6),
-                    'anchor_a_date': anchor_a_date,
-                    'anchor_a_return': anchor_a_value,
-                    'anchor_b_date': anchor_b_date,
-                    'anchor_b_gap': anchor_b_value,
+                    'anchor_a_pos_date': anchor_a_pos_date,
+                    'anchor_a_pos_return': anchor_a_pos_value,
+                    'anchor_a_neg_date': anchor_a_neg_date,
+                    'anchor_a_neg_return': anchor_a_neg_value,
+                    'anchor_b_pos_date': anchor_b_pos_date,
+                    'anchor_b_pos_gap': anchor_b_pos_value,
+                    'anchor_b_neg_date': anchor_b_neg_date,
+                    'anchor_b_neg_gap': anchor_b_neg_value,
                     'anchor_c_date': anchor_c_date,
                     'anchor_c_vol_zscore': anchor_c_value,
                 })
@@ -178,8 +203,10 @@ def calculate_price_changes(
     # Column order
     columns = [
         'start_date', 'tic', 'end_date', 'start_price', 'end_price', 'price_change',
-        'anchor_a_date', 'anchor_a_return',
-        'anchor_b_date', 'anchor_b_gap',
+        'anchor_a_pos_date', 'anchor_a_pos_return',
+        'anchor_a_neg_date', 'anchor_a_neg_return',
+        'anchor_b_pos_date', 'anchor_b_pos_gap',
+        'anchor_b_neg_date', 'anchor_b_neg_gap',
         'anchor_c_date', 'anchor_c_vol_zscore',
     ]
     changes_df = changes_df[columns]
